@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ShopSphere{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <header class="navbar">
+    <div class="container nav-inner">
+      <a class="logo" href="/">🛍️ ShopSphere</a>
+      <nav class="nav-links">
+        <a href="/products">Products</a>
+        <a href="/cart">Cart (<span id="cart-count">0</span>)</a>
+        <a href="/orders" data-auth>My Orders</a>
+        <a href="/profile" data-auth>Profile</a>
+        <a href="/admin" data-admin hidden>Admin</a>
+        <a href="/login" data-guest>Login</a>
+        <a href="/register" data-guest>Register</a>
+        <a href="#" id="logout-btn" data-auth>Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>© 2025 ShopSphere. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

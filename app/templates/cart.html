@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Your Cart</h2>
+<div id="cart-container">Loading...</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadCart() {
+  const token = localStorage.getItem("token");
+  if (!token) { location.href = "/login"; return; }
+  const r = await fetch("/api/cart", { headers: { "Authorization": `Bearer ${token}` } });
+  const { cart } = await r.json();
+  const el = document.getElementById("cart-container");
+
+  if (!cart.items.length) {
+    el.innerHTML = "<p>Your cart is empty.</p>";
+    return;
+  }
+  el.innerHTML = `
+    <table class="table">
+      <thead><tr><th>Product</th><th>Price</th><th>Qty</th><th>Subtotal</th><th></th></tr></thead>
+      <tbody>
+        ${cart.items.map(i => `
+          <tr>
+            <td>${i.name}</td>
+            <td>₹${i.price}</td>
+            <td>
+              <input type="number" min="1" max="${i.stock}" value="${i.quantity}" data-id="${i.id}" class="qty-input">
+            </td>
+            <td>₹${i.subtotal}</td>
+            <td><button class="btn small" data-remove="${i.id}">Remove</button></td>
+          </tr>`).join("")}
+      </tbody>
+    </table>
+    <h3>Total: ₹${cart.total}</h3>
+    <a href="/checkout" class="btn">Proceed to Checkout</a>`;
+
+  el.querySelectorAll(".qty-input").forEach(inp => {
+    inp.onchange = async () => {
+      const res = await fetch(`/api/cart/${inp.dataset.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ quantity: parseInt(inp.value) }),
+      });
+      if (!res.ok) { const d = await res.json(); alert(d.message); }
+      loadCart(); updateCartCount();
+    };
+  });
+  el.querySelectorAll("[data-remove]").forEach(b => {
+    b.onclick = async () => {
+      await fetch(`/api/cart/${b.dataset.remove}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      loadCart(); updateCartCount();
+    };
+  });
+}
+loadCart();
+</script>
+{% endblock %}

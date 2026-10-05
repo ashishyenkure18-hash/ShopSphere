@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Products</h2>
+<button class="btn" id="new-product">+ New Product</button>
+<div id="products-table"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const token = localStorage.getItem("token");
+const authHeaders = { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" };
+
+async function loadProducts() {
+  const r = await fetch("/api/products?per_page=100").then(x => x.json());
+  document.getElementById("products-table").innerHTML = `
+    <table class="table">
+      <thead><tr><th>ID</th><th>Name</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead>
+      <tbody>
+        ${r.products.map(p => `
+          <tr>
+            <td>${p.id}</td>
+            <td>${p.name}</td>
+            <td>₹${p.final_price}</td>
+            <td>${p.stock}</td>
+            <td>
+              <button class="btn small" data-edit="${p.id}">Edit</button>
+              <button class="btn small danger" data-del="${p.id}">Delete</button>
+            </td>
+          </tr>`).join("")}
+      </tbody>
+    </table>`;
+  document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
+    if (!confirm("Delete product?")) return;
+    await fetch(`/api/products/${b.dataset.del}`, { method: "DELETE", headers: authHeaders });
+    loadProducts();
+  });
+  document.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => editProduct(b.dataset.edit));
+}
+
+async function editProduct(id) {
+  const r = await fetch(`/api/products/${id}`).then(x => x.json());
+  const p = r.product;
+  const name = prompt("Name", p.name); if (!name) return;
+  const price = prompt("Price", p.price); if (!price) return;
+  const stock = prompt("Stock", p.stock); if (!stock) return;
+  await fetch(`/api/products/${id}`, {
+    method: "PUT", headers: authHeaders,
+    body: JSON.stringify({ name, price: parseFloat(price), stock: parseInt(stock) }),
+  });
+  loadProducts();
+}
+
+document.getElementById("new-product").onclick = async () => {
+  const cats = await fetch("/api/categories").then(x => x.json());
+  const name = prompt("Product name"); if (!name) return;
+  const price = parseFloat(prompt("Price")); if (!price) return;
+  const stock = parseInt(prompt("Stock", "10"));
+  const catId = parseInt(prompt("Category ID (" + cats.categories.map(c => c.id + ":" + c.name).join(", ") + ")"));
+  const brand = prompt("Brand") || "";
+  const image_url = prompt("Image URL") || "";
+  const res = await fetch("/api/products", {
+    method: "POST", headers: authHeaders,
+    body: JSON.stringify({ name, price, stock, category_id: catId, brand, image_url }),
+  });
+  const data = await res.json();
+  if (!res.ok) alert(data.message);
+  loadProducts();
+};
+
+loadProducts();
+</script>
+{% endblock %}

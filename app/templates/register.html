@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Register</h2>
+<form id="register-form" class="form">
+  <input type="text" name="name" placeholder="Full name" required>
+  <input type="email" name="email" placeholder="Email" required>
+  <input type="tel" name="phone" placeholder="Phone">
+  <input type="password" name="password" placeholder="Password (min 6)" required>
+  <button class="btn" type="submit">Register</button>
+</form>
+<p>Already have an account? <a href="/login">Login</a></p>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById("register-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  const res = await fetch("/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: f.name.value, email: f.email.value,
+      phone: f.phone.value, password: f.password.value,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) { alert(data.message); return; }
+  localStorage.setItem("token", data.access_token);
+  localStorage.setItem("user", JSON.stringify(data.user));
+  location.href = "/";
+});
+</script>
+{% endblock %}

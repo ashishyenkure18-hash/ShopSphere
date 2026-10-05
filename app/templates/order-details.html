@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Order Details</h2>
+<div id="order-details">Loading...</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const oid = JSON.parse('{{ order_id|tojson|safe }}');
+const STAGES = ["Pending", "Confirmed", "Processing", "Shipped", "Out for Delivery", "Delivered"];
+
+(async () => {
+  const token = localStorage.getItem("token");
+  const r = await fetch(`/api/orders/${oid}`, { headers: { "Authorization": `Bearer ${token}` } });
+  if (!r.ok) { document.getElementById("order-details").innerText = "Cannot load order"; return; }
+  const { order } = await r.json();
+  const currentIdx = STAGES.indexOf(order.order_status);
+
+  document.getElementById("order-details").innerHTML = `
+    <h3>Order #${order.id}</h3>
+    <p>Placed on ${new Date(order.created_at).toLocaleString()}</p>
+    <p>Payment: ${order.payment_status}</p>
+    <p>Shipping to: ${order.shipping_address.replace(/\n/g, "<br>")}</p>
+    <h4>Items</h4>
+    <ul>${order.items.map(i => `<li>${i.name} × ${i.quantity} = ₹${i.subtotal}</li>`).join("")}</ul>
+    <h3>Total: ₹${order.total_amount}</h3>
+
+    <h4>Tracking</h4>
+    <ol class="tracking">
+      ${STAGES.map((s, i) => `<li class="${i <= currentIdx ? 'done' : ''}">${s}</li>`).join("")}
+    </ol>
+
+    ${order.order_status !== "Cancelled" && order.order_status !== "Delivered"
+      ? `<button class="btn" id="cancel">Cancel Order</button>` : ""}
+  `;
+
+  document.getElementById("cancel")?.addEventListener("click", async () => {
+    if (!confirm("Cancel this order?")) return;
+    const res = await fetch(`/api/orders/${oid}/cancel`, {
+      method: "POST", headers: { "Authorization": `Bearer ${token}` },
+    });
+    const data = await res.json();
+    alert(data.message);
+    location.reload();
+  });
+})();
+</script>
+{% endblock %}

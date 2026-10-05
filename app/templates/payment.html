@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Payment</h2>
+<form id="payment-form" class="form">
+  <label>Method:</label>
+  <select name="payment_method">
+    <option value="COD">Cash on Delivery</option>
+    <option value="UPI">UPI</option>
+    <option value="Card">Debit/Credit Card</option>
+  </select>
+  <button class="btn" type="submit">Pay Now</button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const params = new URLSearchParams(location.search);
+const orderId = parseInt(params.get("order_id") || localStorage.getItem("last_order"));
+
+document.getElementById("payment-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const token = localStorage.getItem("token");
+  const method = e.target.payment_method.value;
+  const res = await fetch("/api/payments", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+    body: JSON.stringify({ order_id: orderId, payment_method: method }),
+  });
+  const data = await res.json();
+  if (!res.ok) { alert(data.message); return; }
+  location.href = `/order-success?order_id=${orderId}`;
+});
+</script>
+{% endblock %}

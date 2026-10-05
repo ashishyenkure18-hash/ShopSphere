@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>Welcome to ShopSphere</h1>
+  <p>Your one-stop shop for everything.</p>
+  <a class="btn" href="/products">Shop Now</a>
+</section>
+
+<section>
+  <h2>Categories</h2>
+  <div id="category-grid" class="grid"></div>
+</section>
+
+<section>
+  <h2>Featured Products</h2>
+  <div id="featured" class="grid product-grid"></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadHome() {
+  const catRes = await fetch("/api/categories").then(r => r.json());
+  document.getElementById("category-grid").innerHTML = catRes.categories.map(c =>
+    `<a class="card cat-card" href="/products?category=${encodeURIComponent(c.name)}">
+       <strong>${c.name}</strong>
+       <small>${c.product_count} items</small>
+     </a>`).join("");
+
+  const prodRes = await fetch("/api/products?sort=popular&per_page=8").then(r => r.json());
+  document.getElementById("featured").innerHTML = prodRes.products.map(p => `
+    <div class="card product-card">
+      <a href="/product/${p.id}">
+        <img src="${p.image_url || 'https://via.placeholder.com/300x200?text=Product'}" alt="${p.name}">
+        <h3>${p.name}</h3>
+        <p class="brand">${p.brand || ''}</p>
+        <p class="price">₹${p.final_price} <small><s>₹${p.price}</s></small></p>
+      </a>
+      <button class="btn" onclick="addToCart(${p.id})">Add to Cart</button>
+    </div>`).join("");
+}
+
+async function addToCart(pid) {
+  const token = localStorage.getItem("token");
+  if (!token) { location.href = "/login"; return; }
+  const res = await fetch("/api/cart", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+    body: JSON.stringify({ product_id: pid, quantity: 1 }),
+  });
+  const data = await res.json();
+  if (!res.ok) { alert(data.message); return; }
+  updateCartCount();
+  alert("Added to cart!");
+}
+loadHome();
+</script>
+{% endblock %}

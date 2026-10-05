@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Products</h2>
+<div class="filters">
+  <input id="search" placeholder="Search products...">
+  <select id="sort">
+    <option value="newest">Newest</option>
+    <option value="price_asc">Price: Low → High</option>
+    <option value="price_desc">Price: High → Low</option>
+    <option value="popular">Popular</option>
+  </select>
+  <select id="category"><option value="">All Categories</option></select>
+  <button class="btn" id="apply">Apply</button>
+</div>
+<div id="product-grid" class="grid product-grid"></div>
+<div id="pagination" class="pagination"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let page = 1;
+async function loadCategories() {
+  const r = await fetch("/api/categories").then(x => x.json());
+  const sel = document.getElementById("category");
+  r.categories.forEach(c => {
+    const o = document.createElement("option");
+    o.value = c.name; o.textContent = c.name;
+    sel.appendChild(o);
+  });
+}
+async function loadProducts() {
+  const q = document.getElementById("search").value;
+  const sort = document.getElementById("sort").value;
+  const category = document.getElementById("category").value;
+  const params = new URLSearchParams({ q, sort, category, page });
+  const r = await fetch("/api/products?" + params).then(x => x.json());
+
+  document.getElementById("product-grid").innerHTML = r.products.length
+    ? r.products.map(p => `
+      <div class="card product-card">
+        <a href="/product/${p.id}">
+          <img src="${p.image_url || 'https://via.placeholder.com/300x200?text=Product'}" alt="${p.name}">
+          <h3>${p.name}</h3>
+          <p class="brand">${p.brand || ''}</p>
+          <p class="price">₹${p.final_price} ${p.discount ? `<small><s>₹${p.price}</s> -${p.discount}%</small>` : ''}</p>
+          <p class="stock">${p.stock > 0 ? `In stock (${p.stock})` : 'Out of stock'}</p>
+        </a>
+        <button class="btn" ${p.stock ? '' : 'disabled'} onclick="addToCart(${p.id})">Add to Cart</button>
+      </div>`).join("")
+    : "<p>No products found.</p>";
+
+  const pag = document.getElementById("pagination");
+  pag.innerHTML = "";
+  for (let i = 1; i <= r.pages; i++) {
+    const b = document.createElement("button");
+    b.textContent = i;
+    b.className = i === r.page ? "btn active" : "btn";
+    b.onclick = () => { page = i; loadProducts(); };
+    pag.appendChild(b);
+  }
+}
+async function addToCart(pid) {
+  const token = localStorage.getItem("token");
+  if (!token) { location.href = "/login"; return; }
+  const res = await fetch("/api/cart", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+    body: JSON.stringify({ product_id: pid, quantity: 1 }),
+  });
+  const data = await res.json();
+  if (!res.ok) { alert(data.message); return; }
+  updateCartCount();
+}
+document.getElementById("apply").onclick = () => { page = 1; loadProducts(); };
+document.getElementById("search").addEventListener("keydown", e => { if (e.key === "Enter") { page = 1; loadProducts(); } });
+loadCategories().then(loadProducts);
+</script>
+{% endblock %}

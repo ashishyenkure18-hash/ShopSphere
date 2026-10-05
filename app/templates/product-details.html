@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<div id="product-details">Loading...</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const productDetails = document.getElementById("product-details");
+const pid = Number(productDetails.dataset.productId);
+(async () => {
+  const r = await fetch(`/api/products/${pid}`).then(x => x.json());
+  if (!r.product) { document.getElementById("product-details").innerText = "Not found"; return; }
+  const p = r.product;
+  document.getElementById("product-details").innerHTML = `
+    <div class="product-detail">
+      <img src="${p.image_url || 'https://via.placeholder.com/500x400?text=Product'}" alt="${p.name}">
+      <div>
+        <h1>${p.name}</h1>
+        <p class="brand">${p.brand || ''} | ${p.category}</p>
+        <p class="rating">★ ${p.rating}</p>
+        <p class="price">₹${p.final_price} ${p.discount ? `<small><s>₹${p.price}</s> -${p.discount}%</small>` : ''}</p>
+        <p>${p.description || ''}</p>
+        <p>${p.stock > 0 ? 'In stock' : 'Out of stock'}</p>
+        <label>Qty: <input type="number" id="qty" value="1" min="1" max="${p.stock}"></label>
+        <button class="btn" ${p.stock ? '' : 'disabled'} id="add">Add to Cart</button>
+      </div>
+    </div>`;
+  document.getElementById("add")?.addEventListener("click", async () => {
+    const token = localStorage.getItem("token");
+    if (!token) { location.href = "/login"; return; }
+    const quantity = parseInt(document.getElementById("qty").value);
+    const res = await fetch("/api/cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ product_id: pid, quantity }),
+    });
+    const data = await res.json();
+    if (!res.ok) { alert(data.message); return; }
+    updateCartCount();
+    alert("Added!");
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Admin Dashboard</h2>
+<div id="stats" class="grid stats-grid"></div>
+<div class="admin-links">
+  <a href="/admin/products" class="btn">Manage Products</a>
+  <a href="/admin/orders" class="btn">Manage Orders</a>
+  <a href="/admin/users" class="btn">Manage Users</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async () => {
+  const token = localStorage.getItem("token");
+  const r = await fetch("/api/admin/stats", { headers: { "Authorization": `Bearer ${token}` } });
+  if (!r.ok) { document.getElementById("stats").innerText = "Admin access required."; return; }
+  const s = await r.json();
+  document.getElementById("stats").innerHTML = `
+    <div class="card stat"><h3>${s.total_users}</h3><p>Users</p></div>
+    <div class="card stat"><h3>${s.total_products}</h3><p>Products</p></div>
+    <div class="card stat"><h3>${s.total_orders}</h3><p>Orders</p></div>
+    <div class="card stat"><h3>${s.pending_orders}</h3><p>Pending</p></div>
+    <div class="card stat"><h3>${s.completed_orders}</h3><p>Completed</p></div>
+    <div class="card stat"><h3>₹${s.total_sales}</h3><p>Total Sales</p></div>`;
+})();
+</script>
+{% endblock %}

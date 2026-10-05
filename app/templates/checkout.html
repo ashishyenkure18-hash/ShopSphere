@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Checkout</h2>
+<form id="checkout-form" class="form">
+  <input name="full_name" placeholder="Full name" required>
+  <input name="phone" placeholder="Phone" required>
+  <input name="address" placeholder="Address" required>
+  <input name="city" placeholder="City" required>
+  <input name="state" placeholder="State" required>
+  <input name="pincode" placeholder="PIN/ZIP" required>
+  <button class="btn" type="submit">Place Order</button>
+</form>
+<div id="summary"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async () => {
+  const token = localStorage.getItem("token");
+  if (!token) { location.href = "/login"; return; }
+  const r = await fetch("/api/cart", { headers: { "Authorization": `Bearer ${token}` } });
+  const { cart } = await r.json();
+  if (!cart.items.length) { location.href = "/cart"; return; }
+  document.getElementById("summary").innerHTML = `
+    <h3>Order Summary</h3>
+    <ul>${cart.items.map(i => `<li>${i.name} × ${i.quantity} = ₹${i.subtotal}</li>`).join("")}</ul>
+    <h4>Total: ₹${cart.total}</h4>`;
+})();
+
+document.getElementById("checkout-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const token = localStorage.getItem("token");
+  const f = e.target;
+  const payload = Object.fromEntries(new FormData(f));
+  const res = await fetch("/api/orders", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) { alert(data.message); return; }
+  localStorage.setItem("last_order", data.order.id);
+  location.href = "/payment?order_id=" + data.order.id;
+});
+</script>
+{% endblock %}

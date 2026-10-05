@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>My Profile</h2>
+<form id="profile-form" class="form">
+  <input name="name" placeholder="Name" required>
+  <input name="email" placeholder="Email" required>
+  <input name="phone" placeholder="Phone">
+  <input name="address" placeholder="Address">
+  <input name="city" placeholder="City">
+  <input name="state" placeholder="State">
+  <input name="pincode" placeholder="PIN/ZIP">
+  <input name="password" type="password" placeholder="New password (optional)">
+  <button class="btn" type="submit">Update Profile</button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async () => {
+  const token = localStorage.getItem("token");
+  if (!token) { location.href = "/login"; return; }
+  const r = await fetch("/api/auth/profile", { headers: { "Authorization": `Bearer ${token}` } });
+  const { user } = await r.json();
+  const f = document.getElementById("profile-form");
+  ["name", "email", "phone", "address", "city", "state", "pincode"].forEach(k => {
+    if (user[k]) f[k].value = user[k];
+  });
+})();
+
+document.getElementById("profile-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const token = localStorage.getItem("token");
+  const f = e.target;
+  const payload = {};
+  ["name", "email", "phone", "address", "city", "state", "pincode", "password"].forEach(k => {
+    if (f[k].value) payload[k] = f[k].value;
+  });
+  const res = await fetch("/api/auth/profile", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  alert(data.message || (res.ok ? "Updated" : "Error"));
+  if (res.ok) localStorage.setItem("user", JSON.stringify(data.user));
+});
+</script>
+{% endblock %}

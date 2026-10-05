@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Users</h2>
+<div id="users"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const token = localStorage.getItem("token");
+const authHeaders = { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" };
+
+async function load() {
+  const r = await fetch("/api/admin/users", { headers: authHeaders });
+  if (!r.ok) { document.getElementById("users").innerText = "Admin only"; return; }
+  const { users } = await r.json();
+  document.getElementById("users").innerHTML = `
+    <table class="table">
+      <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Active</th><th></th></tr></thead>
+      <tbody>
+        ${users.map(u => `
+          <tr>
+            <td>${u.id}</td>
+            <td>${u.name}</td>
+            <td>${u.email}</td>
+            <td>${u.role}</td>
+            <td>${u.is_active ? "✅" : "❌"}</td>
+            <td>${u.role !== "admin" ? `<button class="btn small" data-toggle="${u.id}">Toggle</button>` : ""}</td>
+          </tr>`).join("")}
+      </tbody>
+    </table>`;
+  document.querySelectorAll("[data-toggle]").forEach(b => b.onclick = async () => {
+    await fetch(`/api/admin/users/${b.dataset.toggle}/toggle`, { method: "PUT", headers: authHeaders });
+    load();
+  });
+}
+load();
+</script>
+{% endblock %}
